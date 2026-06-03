@@ -1,147 +1,399 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Nikalo AI Object Remover</title>
-
-    <style>
-        body {
-            font-family: Arial;
-            text-align: center;
-            margin-top: 40px;
-        }
-
-        canvas {
-            max-width: 700px;
-            border: 2px solid #ccc;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-
-        button {
-            padding: 10px 20px;
-            margin-top: 15px;
-            cursor: pointer;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erase.AI - Text, Watermark & Small Object Remover</title>
+    <!-- Modern Styling -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-
 <body>
 
-    <h1>AI Object Remover</h1>
+    <!-- Header Navbar -->
+    <header>
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <span class="logo-icon">🎨</span>
+                <span>Erase.AI</span>
+            </a>
+            <div>
+                <a href="/" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">Home</a>
+            </div>
+        </div>
+    </header>
 
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="image" required>
-        <button type="submit">Upload Image</button>
-    </form>
+    <!-- Main Content -->
+    <main>
+        {% if not image_path %}
+        <!-- Landing Page View -->
+        <section class="hero-section">
+            <span class="badge">OpenCV-Powered Photo Clean Up</span>
+            <h1 class="hero-title">Remove <span>Text & Watermarks</span> instantly.</h1>
+            <p class="hero-subtitle">
+                A simple, lightweight student frontend tool to erase distracting text, date stamps, lines, and small blemishes from your images. No signups, no fees, completely processed in seconds!
+            </p>
+        </section>
 
-    {% if image_path %}
+        <!-- Interactive Drag & Drop / Upload Card -->
+        <div class="app-card" id="uploadCard">
+            <form action="/upload" method="POST" enctype="multipart/form-data" id="uploadForm">
+                <div class="upload-zone" id="dropZone">
+                    <span class="upload-icon">📤</span>
+                    <h3 class="upload-title">Drag & drop your image here</h3>
+                    <p class="upload-text">Supports PNG, JPG, JPEG (Max 5MB)</p>
+                    <button type="button" class="btn btn-primary">Browse Files</button>
+                    <input type="file" name="image" id="fileInput" class="file-input" required accept="image/*">
+                </div>
+            </form>
 
-    <h2>Draw Over Object To Remove</h2>
+            <!-- Quick Samples Container -->
+            <div class="samples-container">
+                <p class="samples-title">Try it with a sample</p>
+                <div class="samples-grid">
+                    <a href="/load_sample/text_sample.png" class="sample-card">
+                        <img src="{{ url_for('static', filename='samples/text_sample.png') }}" alt="Watermark Sample" class="sample-thumb">
+                        <span class="sample-name">Date Watermark</span>
+                    </a>
+                </div>
+            </div>
+        </div>
 
-    <canvas id="canvas"></canvas>
+        <!-- How It Works Section -->
+        <section class="steps-section">
+            <h2 class="section-title">How It Works</h2>
+            <div class="steps-container">
+                <div class="step-card">
+                    <div class="step-num">1</div>
+                    <h3 class="step-title">Upload Photo</h3>
+                    <p class="step-desc">Upload or drag and drop any image containing small unwanted details.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">2</div>
+                    <h3 class="step-title">Brush Over</h3>
+                    <p class="step-desc">Highlight the exact area of the text or blemish using the brush.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">3</div>
+                    <h3 class="step-title">Erase Magic</h3>
+                    <p class="step-desc">Click erase to let our algorithm reconstruct the clean background.</p>
+                </div>
+            </div>
+        </section>
 
-    <canvas id="maskCanvas" style="display:none;"></canvas>
+        <!-- OpenCV Guidelines Section -->
+        <section class="info-section">
+            <h2 class="section-title">OpenCV Inpainting Guidelines</h2>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <div class="tip-header">
+                        <span class="tip-icon">🔤</span>
+                        <h3 class="tip-title">Perfect for Text & Stamps</h3>
+                    </div>
+                    <p class="tip-desc">Ideal for deleting watermarks, text captions, signatures, and date stamps. The thin line structure is easily rebuilt by neighboring pixels.</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-header">
+                        <span class="tip-icon">🔍</span>
+                        <h3 class="tip-title">Keep the Brush Tight</h3>
+                    </div>
+                    <p class="tip-desc">Adjust the brush size so it closely matches the target. Painting too far outside the object can introduce smudges and unwanted background blend.</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-header">
+                        <span class="tip-icon">⚠️</span>
+                        <h3 class="tip-title">Small Objects Only</h3>
+                    </div>
+                    <p class="tip-desc">Because OpenCV uses mathematical interpolation (Telea's algorithm) without neural hallucination, it struggles with large objects. Focus on details, wires, and blemishes.</p>
+                </div>
+            </div>
+        </section>
 
-    <br>
+        {% else %}
+        <!-- Workspace / Editor View -->
+        <section class="hero-section" style="margin-bottom: 2rem;">
+            <h1 class="hero-title" style="font-size: 2.25rem;">Highlight to <span>Erase</span></h1>
+            <p class="hero-subtitle">Use the brush to paint over the text, logo, or blemish, then click Erase.</p>
+        </section>
 
-    <button onclick="saveMask()">Save Mask</button>
-    <br><br>
+        <div class="app-card">
+            <div class="workspace">
+                <!-- Controls Row -->
+                <div class="workspace-controls">
+                    <div class="control-group">
+                        <span class="control-label">Brush Size:</span>
+                        <div class="brush-slider-container">
+                            <input type="range" id="brushSlider" min="5" max="50" value="15" class="brush-slider">
+                            <span id="brushValue" class="brush-value">15px</span>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group" style="gap: 1.5rem;">
+                        <span class="control-label">Brush Preview:</span>
+                        <div style="width: 100px; height: 50px; display: flex; align-items: center; justify-content: center; background-color: var(--bg-tertiary); border-radius: var(--radius-sm);">
+                            <div id="brushPreview" class="brush-preview-circle" style="width: 30px; height: 30px;"></div>
+                        </div>
+                    </div>
 
-        <a href="/remove_object">
-            <button>
-            Remove Object
-            </button>
-        </a>
+                    <div class="control-group" style="gap: 0.75rem;">
+                        <button onclick="clearCanvas()" class="btn btn-secondary">Clear Brush</button>
+                        <a href="/" class="btn btn-secondary">Cancel</a>
+                        <button id="removeBtn" onclick="processRemoval()" class="btn btn-accent">Erase Text/Object</button>
+                    </div>
+                </div>
 
-    <script>
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
-        const maskCanvas = document.getElementById("maskCanvas");
-        const maskCtx = maskCanvas.getContext("2d");
+                <!-- Canvas Workspace -->
+                <div class="canvas-container">
+                    <canvas id="canvas"></canvas>
+                    <canvas id="maskCanvas" style="display:none;"></canvas>
+                </div>
+            </div>
+        </div>
 
-        const img = new Image();
+        <script>
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+            const maskCanvas = document.getElementById("maskCanvas");
+            const maskCtx = maskCanvas.getContext("2d");
+            const slider = document.getElementById("brushSlider");
+            const valueEl = document.getElementById("brushValue");
+            const previewCircle = document.getElementById("brushPreview");
 
-        img.src = "{{ url_for('static', filename=image_path) }}";
+            let brushSize = parseInt(slider.value);
+            const img = new Image();
 
-        img.onload = function () {
-             canvas.width = img.width;
+            // Set up image path
+            img.src = "{{ url_for('static', filename=image_path) }}";
+
+            img.onload = function () {
+                canvas.width = img.width;
                 canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
 
-             ctx.drawImage(img,0,0);
-            maskCanvas.width = img.width;
-            maskCanvas.height = img.height;
+                maskCanvas.width = img.width;
+                maskCanvas.height = img.height;
+                maskCtx.fillStyle = "black";
+                maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+                
+                updateBrushPreview();
+            };
 
-            maskCtx.fillStyle = "black";
-            maskCtx.fillRect(
-             0,
-             0,
-                maskCanvas.width,
-                maskCanvas.height
-            );
-        };
+            // Track brush size updates
+            slider.addEventListener("input", (e) => {
+                brushSize = parseInt(e.target.value);
+                valueEl.textContent = brushSize + "px";
+                updateBrushPreview();
+            });
+
+            function updateBrushPreview() {
+                // The slider is half-radius size, preview circle represents actual brush diameter
+                previewCircle.style.width = (brushSize * 2) + "px";
+                previewCircle.style.height = (brushSize * 2) + "px";
+            }
 
             let drawing = false;
+            let lastX = 0;
+            let lastY = 0;
 
-            canvas.addEventListener("mousedown", () => {
-            drawing = true;
-        });
+            function getCoordinates(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+
+                const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
+
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            }
+
+            function drawCircle(x, y) {
+                ctx.beginPath();
+                ctx.arc(x, y, brushSize, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(239, 68, 68, 0.55)";
+                ctx.fill();
+
+                maskCtx.beginPath();
+                maskCtx.arc(x, y, brushSize, 0, Math.PI * 2);
+                maskCtx.fillStyle = "white";
+                maskCtx.fill();
+            }
+
+            function drawLine(x1, y1, x2, y2) {
+                ctx.beginPath();
+                ctx.strokeStyle = "rgba(239, 68, 68, 0.55)";
+                ctx.lineWidth = brushSize * 2;
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+                maskCtx.beginPath();
+                maskCtx.strokeStyle = "white";
+                maskCtx.lineWidth = brushSize * 2;
+                maskCtx.lineCap = "round";
+                maskCtx.lineJoin = "round";
+                maskCtx.moveTo(x1, y1);
+                maskCtx.lineTo(x2, y2);
+                maskCtx.stroke();
+            }
+
+            // Mouse Events
+            canvas.addEventListener("mousedown", (e) => {
+                drawing = true;
+                const coords = getCoordinates(e);
+                lastX = coords.x;
+                lastY = coords.y;
+                drawCircle(coords.x, coords.y);
+            });
 
             canvas.addEventListener("mouseup", () => {
-            drawing = false;
-         });
+                drawing = false;
+            });
 
-            canvas.addEventListener("mousemove", draw);
+            canvas.addEventListener("mouseleave", () => {
+                drawing = false;
+            });
 
-         function draw(e){
+            canvas.addEventListener("mousemove", (e) => {
+                if (!drawing) return;
+                const coords = getCoordinates(e);
+                drawLine(lastX, lastY, coords.x, coords.y);
+                lastX = coords.x;
+                lastY = coords.y;
+            });
 
-            if(!drawing) return;
+            // Touch Events for Tablet/Mobile Devices
+            canvas.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                drawing = true;
+                const coords = getCoordinates(e);
+                lastX = coords.x;
+                lastY = coords.y;
+                drawCircle(coords.x, coords.y);
+            }, { passive: false });
 
-            const rect = canvas.getBoundingClientRect();
+            canvas.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                drawing = false;
+            }, { passive: false });
 
-         const scaleX = canvas.width / rect.width;
-         const scaleY = canvas.height / rect.height;
+            canvas.addEventListener("touchmove", (e) => {
+                e.preventDefault();
+                if (!drawing) return;
+                const coords = getCoordinates(e);
+                drawLine(lastX, lastY, coords.x, coords.y);
+                lastX = coords.x;
+                lastY = coords.y;
+            }, { passive: false });
 
-         const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
+            function clearCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
 
-         ctx.beginPath();
-            ctx.arc(x, y, 15, 0, 2 * Math.PI);
-         ctx.fillStyle = "red";
-         ctx.fill();
-            maskCtx.beginPath();
+                maskCtx.fillStyle = "black";
+                maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+            }
 
-            maskCtx.arc(
-                x,
-                y,
-                15,
-                0,
-                2 * Math.PI
-            );
+            // Save Mask & remove object in one step
+            function processRemoval() {
+                const dataURL = maskCanvas.toDataURL();
+                const btn = document.getElementById("removeBtn");
 
-            maskCtx.fillStyle = "white";
+                btn.disabled = true;
+                btn.innerHTML = `<svg class="spinner" viewBox="0 0 50 50" style="margin-right: 8px; vertical-align: middle; display: inline-block;"><circle cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke="white" style="stroke: white;"></circle></svg> Erasing...`;
 
-            maskCtx.fill();
-            }   
-
-            function saveMask() {
-
-            const dataURL = maskCanvas.toDataURL();
-
-            fetch("/save_mask", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    image: dataURL
+                fetch("/save_mask", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        image: dataURL
+                    })
                 })
-            })
-            .then(response => response.text())
-            .then(data => alert(data));
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = "/remove_object";
+                    } else {
+                        throw new Error("Failed to save mask");
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert("Error: Could not save brush mask. Please try again.");
+                    btn.disabled = false;
+                    btn.innerHTML = "Erase Text/Object";
+                });
+            }
+        </script>
+        {% endif %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Erase.AI - Custom OpenCV Image Inpainter. Designed for student projects & photo cleaning.</p>
+    </footer>
+
+    <!-- JS helper for drag and drop styling -->
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadForm = document.getElementById('uploadForm');
+
+        if (dropZone && fileInput) {
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    uploadForm.submit();
+                }
+            });
+
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            // Highlight drop zone when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            // Handle dropped files
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function preventDefaults (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function highlight(e) {
+                dropZone.classList.add('highlight');
+                dropZone.style.borderColor = 'var(--primary)';
+                dropZone.style.backgroundColor = 'var(--primary-light)';
+            }
+
+            function unhighlight(e) {
+                dropZone.classList.remove('highlight');
+                dropZone.style.borderColor = 'rgba(124, 58, 237, 0.3)';
+                dropZone.style.backgroundColor = 'var(--bg-secondary)';
+            }
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    uploadForm.submit();
+                }
+            }
         }
     </script>
-
-    {% endif %}
-
 </body>
 </html>

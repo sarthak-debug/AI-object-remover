@@ -1,22 +1,80 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Result</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erase.AI - Result</title>
+    <!-- Modern Styling -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body style="text-align:center">
+<body>
 
-    <h1>Object Removed</h1>
+    <!-- Header Navbar -->
+    <header>
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <span class="logo-icon">🎨</span>
+                <span>Erase.AI</span>
+            </a>
+            <div>
+                <a href="/" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">Home</a>
+            </div>
+        </div>
+    </header>
 
-    <img src="{{ url_for('static', filename=result_image) }}"
-         width="800">
+    <!-- Main Content -->
+    <main>
+        <section class="hero-section" style="margin-bottom: 2.5rem;">
+            <span class="badge" style="background-color: var(--accent-light); color: var(--accent); border-color: rgba(20, 184, 166, 0.15);">Processing Complete</span>
+            <h1 class="hero-title" style="font-size: 2.5rem;">Object <span>Eraser Result</span></h1>
+            <p class="hero-subtitle">Below is the comparison between the original photo and the final inpainted result.</p>
+        </section>
 
-    <br><br>
+        <!-- Result Card containing the comparison -->
+        <div class="app-card">
+            <div class="result-container">
+                
+                <!-- Side by Side Grid -->
+                <div class="result-images">
+                    
+                    <!-- Original Card -->
+                    <div class="result-card">
+                        <h3 class="result-card-title">Before (Original)</h3>
+                        <div class="result-img-wrapper">
+                            {% if original_image %}
+                            <img src="{{ url_for('static', filename=original_image) }}" alt="Original Image">
+                            {% else %}
+                            <p style="color: var(--text-muted);">Original image not found</p>
+                            {% endif %}
+                        </div>
+                    </div>
 
-    <a href="/">
-        <button>
-            Upload New Image
-        </button>
-    </a>
+                    <!-- Processed Result Card -->
+                    <div class="result-card">
+                        <h3 class="result-card-title">After (Erase.AI)</h3>
+                        <div class="result-img-wrapper">
+                            <img src="{{ url_for('static', filename=result_image) }}?t={{ range(1, 99999) | random }}" alt="Processed Image">
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Action buttons -->
+                <div class="result-actions">
+                    <a href="/" class="btn btn-secondary">Start Over</a>
+                    <a href="{{ url_for('static', filename=result_image) }}" download="inpainted_result.png" class="btn btn-primary">
+                        <span>📥</span> Download Clean Image
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Erase.AI - Custom OpenCV Image Inpainter. Designed for student projects & photo cleaning.</p>
+    </footer>
 
 </body>
 </html>

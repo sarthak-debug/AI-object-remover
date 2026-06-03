@@ -50,6 +50,25 @@ def upload():
     )
 
 
+@app.route("/load_sample/<filename>")
+def load_sample(filename):
+    import shutil
+    src = os.path.join("static", "samples", filename)
+    dst = os.path.join("static", "uploads", filename)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    if os.path.exists(src):
+        shutil.copy(src, dst)
+        with open("current_image.txt", "w") as f:
+            f.write(dst)
+        global current_image_path
+        current_image_path = dst
+        return render_template(
+            "index.html",
+            image_path=f"uploads/{filename}"
+        )
+    return "Sample not found", 404
+
+
 @app.route("/save_mask", methods=["POST"])
 def save_mask():
 
@@ -78,15 +97,12 @@ def remove_object():
     if image is None:
         return f"Could not load image: {current_image_path}"
 
-    if image is None:
-        return f"Could not load image: {current_image_path}"
-
     mask = cv2.imread("mask.png", 0)
 
     mask = cv2.resize(
-    mask,
-    (image.shape[1], image.shape[0])
-)
+        mask,
+        (image.shape[1], image.shape[0])
+    )
     print("Image Shape:", image.shape)
     print("Mask Shape:", mask.shape)
     result = cv2.inpaint(
@@ -101,9 +117,16 @@ def remove_object():
         result
     )
 
+    normalized_path = current_image_path.replace("\\", "/")
+    if normalized_path.startswith("static/"):
+        original_relative = normalized_path[len("static/"):]
+    else:
+        original_relative = normalized_path
+
     return render_template(
         "result.html",
-        result_image="result.png"
+        result_image="result.png",
+        original_image=original_relative
     )
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Object Remover</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        canvas {
+            max-width: 700px;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>AI Object Remover</h1>
+
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="image" required>
+        <button type="submit">Upload Image</button>
+    </form>
+
+    {% if image_path %}
+
+    <h2>Draw Over Object To Remove</h2>
+
+    <canvas id="canvas"></canvas>
+
+    <canvas id="maskCanvas" style="display:none;"></canvas>
+
+    <br>
+
+    <button onclick="saveMask()">Save Mask</button>
+    <br><br>
+
+        <a href="/remove_object">
+            <button>
+            Remove Object
+            </button>
+        </a>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const maskCanvas = document.getElementById("maskCanvas");
+        const maskCtx = maskCanvas.getContext("2d");
+
+        const img = new Image();
+
+        img.src = "{{ url_for('static', filename=image_path) }}";
+
+        img.onload = function () {
+             canvas.width = img.width;
+                canvas.height = img.height;
+
+             ctx.drawImage(img,0,0);
+            maskCanvas.width = img.width;
+            maskCanvas.height = img.height;
+
+            maskCtx.fillStyle = "black";
+            maskCtx.fillRect(
+             0,
+             0,
+                maskCanvas.width,
+                maskCanvas.height
+            );
+        };
+
+            let drawing = false;
+
+            canvas.addEventListener("mousedown", () => {
+            drawing = true;
+        });
+
+            canvas.addEventListener("mouseup", () => {
+            drawing = false;
+         });
+
+            canvas.addEventListener("mousemove", draw);
+
+         function draw(e){
+
+            if(!drawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+
+         const scaleX = canvas.width / rect.width;
+         const scaleY = canvas.height / rect.height;
+
+         const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+
+         ctx.beginPath();
+            ctx.arc(x, y, 15, 0, 2 * Math.PI);
+         ctx.fillStyle = "red";
+         ctx.fill();
+            maskCtx.beginPath();
+
+            maskCtx.arc(
+                x,
+                y,
+                15,
+                0,
+                2 * Math.PI
+            );
+
+            maskCtx.fillStyle = "white";
+
+            maskCtx.fill();
+            }   
+
+            function saveMask() {
+
+            const dataURL = maskCanvas.toDataURL();
+
+            fetch("/save_mask", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    image: dataURL
+                })
+            })
+            .then(response => response.text())
+            .then(data => alert(data));
+        }
+    </script>
+
+    {% endif %}
+
+</body>
+</html>

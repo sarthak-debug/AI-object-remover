@@ -3,6 +3,7 @@ import os
 import base64
 import cv2
 import numpy as np
+from lama_ai.model import remove_object as ai_remove_object
 
 current_image_path = ""
 app = Flask(__name__)
@@ -89,17 +90,10 @@ def remove_object():
 )
     print("Image Shape:", image.shape)
     print("Mask Shape:", mask.shape)
-    result = cv2.inpaint(
-        image,
-        mask,
-        3,
-        cv2.INPAINT_TELEA
-    )
-
-    cv2.imwrite(
-        "static/result.png",
-        result
-    )
+    result_path = ai_remove_object(
+    current_image_path,
+    "mask.png"
+)
 
     return render_template(
         "result.html",

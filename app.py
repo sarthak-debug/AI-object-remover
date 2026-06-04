@@ -3,7 +3,7 @@ import os
 import base64
 import cv2
 import numpy as np
-from lama_ai.model import remove_object as ai_remove_object
+from lama_ai.inpaint_model import remove_object as ai_remove_object
 
 current_image_path = ""
 app = Flask(__name__)
@@ -68,7 +68,7 @@ def save_mask():
 
 @app.route("/remove_object")
 def remove_object():
-
+    print("REMOVE OBJECT ROUTE HIT")
     with open("current_image.txt", "r") as f:
         current_image_path = f.read().strip()
 
@@ -90,11 +90,13 @@ def remove_object():
 )
     print("Image Shape:", image.shape)
     print("Mask Shape:", mask.shape)
+    print("BEFORE AI CALL")
     result_path = ai_remove_object(
     current_image_path,
     "mask.png"
+    
 )
-
+    print("AFTER AI CALL")
     return render_template(
         "result.html",
         result_image="result.png"
